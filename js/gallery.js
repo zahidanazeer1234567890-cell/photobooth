@@ -6,11 +6,13 @@
   var filter = document.getElementById('gallery-filter');
   var count = document.getElementById('photo-count');
   var viewer = document.getElementById('photo-viewer');
-  var qrViewer = document.getElementById('photo-qr-viewer');
+  var codeViewer = document.getElementById('photo-code-viewer');
   var viewerImage = document.getElementById('photo-viewer-image');
   var viewerCaption = document.getElementById('photo-viewer-caption');
-  var qrImage = document.getElementById('photo-qr-image');
-  var qrCaption = document.getElementById('photo-qr-caption');
+  var codeCaption = document.getElementById('photo-code-caption');
+  var accessCode = document.getElementById('photo-access-code');
+  var accessExpiry = document.getElementById('photo-access-expiry');
+  var accessLink = document.getElementById('photo-access-link');
   var viewedMemory = null;
   var memories = [];
 
@@ -32,17 +34,23 @@
     return parsed.toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
 
-  function openQrCode(memory) {
+  function openAccessCode(memory) {
     if (!memory) return;
-    var qrUrl = typeof window.FlashbackStorage.qrImageUrlFor === 'function' ? window.FlashbackStorage.qrImageUrlFor(memory.id, 220) : '';
-    if (!qrUrl) {
-      qrCaption.textContent = 'A QR code could not be prepared for this photo.';
-      return;
+    var active = window.FlashbackStorage.hasActiveAccess(memory);
+    codeCaption.textContent = active ? 'Give this private code to the guest. It will only work for 24 hours after the photo was saved.' : 'This photo does not have an active guest code. Save it again on the hosted site to create one.';
+    accessCode.hidden = !active;
+    accessLink.hidden = !active;
+    document.getElementById('copy-viewed-code').disabled = !active;
+    if (active) {
+      accessCode.textContent = memory.accessCode;
+      accessExpiry.textContent = 'Expires ' + dateText(memory.accessExpiresAt);
+      accessLink.href = window.FlashbackStorage.accessUrlFor(memory.accessCode);
+    } else {
+      accessCode.textContent = '';
+      accessExpiry.textContent = '';
     }
-    qrCaption.textContent = 'Scan to open "' + memory.title + '" in Flashback.';
-    qrImage.src = qrUrl;
-    if (typeof qrViewer.showModal === 'function') qrViewer.showModal();
-    else qrViewer.setAttribute('open', 'open');
+    if (typeof codeViewer.showModal === 'function') codeViewer.showModal();
+    else codeViewer.setAttribute('open', 'open');
   }
 
   function render() {
@@ -84,6 +92,11 @@
       downloadButton.type = 'button';
       downloadButton.textContent = '↓ Save';
       downloadButton.addEventListener('click', function () { window.FlashbackStorage.download(memory.dataUrl, 'flashback-memory.jpg'); });
+      var codeButton = document.createElement('button');
+      codeButton.type = 'button';
+      codeButton.textContent = 'Code';
+      codeButton.setAttribute('aria-label', 'Show guest code for ' + memory.title);
+      codeButton.addEventListener('click', function () { openAccessCode(memory); });
       var deleteButton = document.createElement('button');
       deleteButton.type = 'button';
       deleteButton.className = 'delete-memory';
@@ -99,7 +112,7 @@
           window.alert(error.message);
         }
       });
-      actions.append(viewButton, downloadButton, deleteButton);
+      actions.append(viewButton, downloadButton, codeButton, deleteButton);
       card.append(image, info, actions);
       grid.appendChild(card);
     });
@@ -114,30 +127,26 @@
   document.getElementById('download-viewed-photo').addEventListener('click', function () {
     if (viewedMemory) window.FlashbackStorage.download(viewedMemory.dataUrl, 'flashback-memory.jpg');
   });
-  document.getElementById('generate-viewed-qr').addEventListener('click', function () {
-    if (viewedMemory) openQrCode(viewedMemory);
+  document.getElementById('show-viewed-code').addEventListener('click', function () {
+    if (viewedMemory) openAccessCode(viewedMemory);
   });
-  document.getElementById('close-photo-qr-viewer').addEventListener('click', function () {
-    qrViewer.close();
+  document.getElementById('close-photo-code-viewer').addEventListener('click', function () {
+    codeViewer.close();
   });
-  document.getElementById('print-viewed-qr').addEventListener('click', function () {
-    if (!qrImage.src) return;
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      window.alert('Your browser blocked the print window. Please allow pop-ups and try again.');
-      return;
-    }
-    printWindow.document.write('<html><head><title>Flashback QR code</title><style>body{display:flex;align-items:center;justify-content:center;margin:0;background:#f8f1e1;font-family:Georgia,serif;color:#3d2b1f;} .card{padding:24px;border:1px solid #d8bb8d;border-radius:12px;background:#fffdf7;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.08);} img{display:block;max-width:280px;width:100%;height:auto;margin:0 auto 14px;} p{margin:0;font-size:18px;}</style></head><body><div class="card"><img src="' + qrImage.src + '" alt="QR code"><p>Scan to view this memory</p></div></body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+  document.getElementById('copy-viewed-code').addEventListener('click', function () {
+    if (!viewedMemory || !window.FlashbackStorage.hasActiveAccess(viewedMemory)) return;
+    window.FlashbackStorage.copyText(viewedMemory.accessCode).then(function () {
+      codeCaption.textContent = 'Private access code copied. It expires in 24 hours.';
+    }).catch(function (error) {
+      codeCaption.textContent = error.message;
+    });
   });
 
   viewer.addEventListener('click', function (event) {
     if (event.target === viewer) viewer.close();
   });
-  qrViewer.addEventListener('click', function (event) {
-    if (event.target === qrViewer) qrViewer.close();
+  codeViewer.addEventListener('click', function (event) {
+    if (event.target === codeViewer) codeViewer.close();
   });
 
   try {

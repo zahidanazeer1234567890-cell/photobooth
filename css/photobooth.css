@@ -94,7 +94,7 @@
 .print-photo-details { width: 28%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center; }
 .print-photo-details > span { color: #a94427; font-size: 7px; font-weight: 700; letter-spacing: .13em; }
 .print-photo-details small { color: #806d59; font-size: 6px; line-height: 1.25; }
-.print-photo-qr { display: block; width: min(100%, 58px); aspect-ratio: 1; object-fit: contain; background: white; }
+.print-access-code { display: block; max-width: 100%; color: #a94427; font: 800 10px/1.2 var(--sans); letter-spacing: .08em; overflow-wrap: anywhere; }
 .print-qr-note, .print-image-area > p { margin: 0; color: #9c8263; font: italic 10px/1.5 var(--serif); text-align: center; }
 .print-sheet-footer { padding-top: 8px; border-top: 1px solid #ddcdb2; text-align: center; }
 .print-sheet-footer p { margin: 3px 0; color: #705840; font: italic 9px var(--serif); }
@@ -118,7 +118,6 @@
   .print-photo-details { gap: 1mm; }
   .print-photo-details > span { font-size: 7pt; }
   .print-photo-details small { font-size: 6pt; }
-  .print-photo-qr { width: 22mm; }
   .print-qr-note, .print-image-area > p { font-size: 10pt; }
   .print-sheet-footer { padding-top: 5mm; }
   .print-sheet-footer p { font-size: 10pt; }

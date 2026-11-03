@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#f3dfbb"><title>Guest Photo Access — Flashback</title><link rel="stylesheet" href="../css/style.css"><link rel="stylesheet" href="../css/access.css"><link rel="stylesheet" href="../css/responsive.css"></head>
+<body>
+  <header class="site-header"><a class="brand" href="../index.html"><span class="brand-mark">◉</span><span><strong>FLASHBACK</strong><small>RETRO PHOTOBOOTH</small></span></a><button class="menu-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button><nav class="site-nav"><a href="../index.html">Home</a><a href="photobooth.html">Photobooth</a><a href="editor.html">Editor</a><a href="gallery.html">Gallery</a><a class="active" href="access.html">Guest code</a><a href="frames-stickers.html">Frames &amp; Stickers</a><a href="about.html">About</a><a href="help.html">Help</a></nav></header>
+  <main class="page-wrap access-page">
+    <div class="page-title"><div><span class="eyebrow">A PRIVATE LITTLE KEEPSAKE</span><h1>Unlock your photo <span class="title-sparkle">✦</span></h1></div><p>Enter the 12-character code the photographer gave you.</p></div>
+    <section class="access-card paper-card">
+      <form id="access-form">
+        <label for="access-code-input">Your photo code</label>
+        <div class="access-code-row"><input id="access-code-input" name="code" type="text" inputmode="text" autocomplete="one-time-code" maxlength="14" placeholder="ABCD-EFGH-JKLM" aria-describedby="access-help" required><button class="button button-primary" type="submit">Unlock photo</button></div>
+        <p id="access-help" class="field-hint">Codes are private and work for 24 hours. Keep yours to yourself.</p>
+      </form>
+      <p class="access-status" id="access-status" role="status" aria-live="polite"></p>
+      <section id="access-result" class="access-result" hidden>
+        <h2 id="access-title"></h2>
+        <img id="access-image" alt="Your private Flashback photo">
+        <p id="access-expiry"></p>
+        <a id="access-download" class="button button-primary" download="flashback-photo.jpg">↓ &nbsp; Download photo</a>
+      </section>
+    </section>
+  </main>
+  <footer class="site-footer"><a class="brand brand-light" href="../index.html"><span class="brand-mark">◉</span><span><strong>FLASHBACK</strong><small>RETRO PHOTOBOOTH</small></span></a><p>Capture the moment. Keep the memory.</p><small>Guest photos are not saved to your browser.</small></footer>
+  <script src="../js/main.js"></script><script src="../js/access.js"></script>
+</body>
+</html>

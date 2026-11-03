@@ -10,6 +10,10 @@
   var dateInput = document.getElementById('editor-date');
   var photoName = document.getElementById('editor-photo-name');
   var status = document.getElementById('editor-status');
+  var accessPanel = document.getElementById('editor-access-result');
+  var accessCodeOutput = document.getElementById('editor-access-code');
+  var accessExpiry = document.getElementById('editor-access-expiry');
+  var accessLink = document.getElementById('editor-access-link');
   var originalUrl = '';
   var sourceHasDateStamp = false;
   var zoom = 100, brightness = 100, contrast = 100, rotation = 0, filter = 'normal', frame = 'none', ratio = 'free', stickerPosition = 'top-right';
@@ -160,19 +164,6 @@
     if (!style) return;
     context.fillStyle = style.base;
     context.fillRect(0, 0, width, height);
-  }
-  function generateQrCode(payload) {
-    var qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=440x440&margin=2&ecc=M&data=' + encodeURIComponent(payload);
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      report('Your browser blocked the print window. Please allow pop-ups and try again.');
-      return;
-    }
-    printWindow.document.write('<html><head><title>Flashback QR code</title><style>body{display:flex;align-items:center;justify-content:center;margin:0;background:#f8f1e1;font-family:Georgia,serif;color:#3d2b1f;} .card{padding:24px;border:1px solid #d8bb8d;border-radius:12px;background:#fffdf7;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.08);} img{display:block;max-width:320px;width:100%;height:auto;margin:0 auto 14px;} p{margin:0;font-size:18px;}</style></head><body><div class="card"><img src="' + qrImageUrl + '" alt="Flashback QR code"><p>Scan to view this memory</p></div></body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    report('Print window opened for the QR code.');
   }
   function drawEdited() {
     return new Promise(function (resolve, reject) {
@@ -463,22 +454,28 @@
     refresh();
     report('Edits reset.');
   });
-  document.getElementById('generate-qr-code').addEventListener('click', function () {
-    if (image.hidden) { report('Choose a photo before generating a QR code.'); return; }
-    var payload = window.location.href;
-    var latest = null;
-    try { latest = window.FlashbackStorage.latest(); } catch (error) { latest = null; }
-    if (latest && latest.id) payload = window.FlashbackStorage.shareUrlFor(latest.id);
-    else payload = payload.split('?')[0] + '?title=' + encodeURIComponent(photoName.textContent || 'Flashback');
-    generateQrCode(payload);
+  document.getElementById('copy-editor-code').addEventListener('click', function () {
+    window.FlashbackStorage.copyText(accessCodeOutput.textContent).then(function () {
+      report('Private access code copied. It expires in 24 hours.');
+    }).catch(function (error) { report(error.message); });
   });
   document.getElementById('save-edit').addEventListener('click', function () {
     var saveButton = document.getElementById('save-edit');
     saveButton.disabled = true;
+    accessPanel.hidden = true;
     drawEdited().then(function (dataUrl) {
-      window.FlashbackStorage.save({ title: 'Edited Flashback', type: 'photo', dataUrl: dataUrl, hasDateStamp: sourceHasDateStamp || stampToggle.checked });
+      var memory = window.FlashbackStorage.save({ title: 'Edited Flashback', type: 'photo', dataUrl: dataUrl, hasDateStamp: sourceHasDateStamp || stampToggle.checked });
       window.FlashbackStorage.download(dataUrl, 'flashback-edited.jpg');
-      report('Saved to your gallery and downloaded!');
+      report('Saved to this device. Creating a private guest code…');
+      return window.FlashbackStorage.publish(memory).then(function (published) {
+        accessCodeOutput.textContent = published.accessCode;
+        accessExpiry.textContent = 'Valid until ' + new Date(published.accessExpiresAt).toLocaleString();
+        accessLink.href = window.FlashbackStorage.accessUrlFor(published.accessCode);
+        accessPanel.hidden = false;
+        report(published.accessStorageWarning ? 'The code was created, but could not be saved in this browser. Copy it now: ' + published.accessStorageWarning : 'Your photo is ready to share. Give the guest this code; it expires in 24 hours.');
+      }).catch(function (error) {
+        report('Saved on this device only. A guest code could not be created: ' + error.message);
+      });
     }).catch(function (error) { report(error.message); }).finally(function () { saveButton.disabled = false; });
   });
   try {

@@ -1,25 +1,71 @@
 # Flashback Retro Photobooth
 
-A responsive, browser-based retro photobooth and photo editor. It is built with plain HTML, CSS, and JavaScript, with no build step or package installation.
+A responsive, browser-based retro photobooth and photo editor built with plain HTML, CSS, and JavaScript. Vercel serves the static site and API routes; Supabase stores guest-share photos in a private bucket.
 
-## Run it
+## Run locally
 
-Open `index.html` in a browser, or serve this folder from a local web server. Camera access requires a secure browser context (HTTPS or `localhost`) and permission from the user. If camera access is unavailable, the photobooth and editor also accept uploaded photos.
+Open `index.html` in a browser, or serve this folder from a local web server. Camera access requires HTTPS or `localhost` and the visitor's permission. Uploads work when camera access is unavailable.
+
+The local gallery works without a backend, but creating guest codes requires the Vercel API and Supabase setup below.
+
+## Enable private guest codes on Vercel
+
+1. Create a Supabase project and a **private** Storage bucket named `flashback-memories`. Set the bucket's maximum file size to 3 MB and allow JPEG, PNG, and WebP files.
+2. In the Supabase SQL editor, create the access-code table:
+
+   ```sql
+   create table if not exists public.flashback_memories (
+     id uuid primary key,
+     code_hash text not null unique,
+     title text not null,
+     object_path text not null unique,
+     created_at timestamptz not null,
+     expires_at timestamptz not null
+   );
+
+   alter table public.flashback_memories enable row level security;
+   revoke all on public.flashback_memories from anon, authenticated;
+   grant all on public.flashback_memories to service_role;
+   create index if not exists flashback_memories_expires_at_idx
+     on public.flashback_memories (expires_at);
+
+   insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+   values (
+     'flashback-memories',
+     'flashback-memories',
+     false,
+     3145728,
+     array['image/jpeg', 'image/png', 'image/webp']
+   )
+   on conflict (id) do update set
+     public = false,
+     file_size_limit = 3145728,
+     allowed_mime_types = excluded.allowed_mime_types;
+   ```
+
+3. In the Vercel project settings, add these environment variables for the deployment:
+   - `SUPABASE_URL` — the Supabase project URL.
+   - `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role key. Keep it server-side; never add it to frontend code.
+   - `CRON_SECRET` — a long random secret used to authorize Vercel's expired-photo cleanup job.
+4. Deploy the project on Vercel. Saving a finished photo on the deployed site uploads it to the private bucket and creates an independent, random 24-hour access code. Give each guest their code and this link: `https://YOUR-VERCEL-DOMAIN/pages/access.html`. They can open that page on any device and enter it. The editor also provides a direct guest-page link with the code prefilled.
+
+The guest code is stored hashed in the database; photo reads require a valid, unexpired code and use a short-lived signed image URL. Expired photos are removed by the daily Vercel cron job. The local Gallery remains browser-specific and is not the guest-access page. Guest codes are bearer secrets: share each only with its intended recipient.
 
 ## Features
 
-- Responsive home, photobooth, editor, gallery, frames and stickers, about, and help pages.
-- Camera capture with a timer, one/two/three/four-photo layouts, eight retro filter presets, and 12 simple solid-color frames. Each captured photo keeps the frame color selected at capture time.
-- Photo editing with upload, crop ratios, zoom, rotation, brightness, contrast, the same eight filter presets, 12 solid-color frame options, stickers, and date labels. Frame-catalog selections open directly in the editor. Photobooth strips preserve each shot's selected frame in the saved image and editing source; the editor does not automatically add a second frame when opening a strip.
-- Saved photos can be viewed, downloaded, searched, filtered, or removed from the gallery, and each memory can also generate a QR code for quick sharing.
-- The photobooth includes a live A4 portrait print preview and a printer-friendly print sheet with one QR code per captured photo. Each photo is saved separately to the local gallery; its QR opens that saved memory only in the same browser and app location.
-- Photos are kept in browser local storage on the current device; no server upload is used.
+- Responsive home, photobooth, editor, gallery, frames and stickers, about, help, and guest-code pages.
+- Camera capture with a timer, one/two/three/four-photo layouts, eight retro filters, frames, and individual photo saves.
+- Photo editing with upload, crop ratios, zoom, rotation, brightness, contrast, filters, frames, stickers, and date labels.
+- Saved photos can be viewed, downloaded, searched, filtered, or removed from the local gallery.
+- A4 photobooth print preview lists each individual photo's guest code after sharing is configured.
+- The front end does not send guest codes to a QR-code image service.
 
 ## Project structure
 
 - `index.html` and `pages/` contain the site pages.
 - `css/` contains shared, page-specific, and responsive styles.
-- `js/` contains navigation, camera, editor, gallery, and local storage behavior.
-- The decorative artwork is drawn with CSS and native text/emoji, so no image asset download is required.
+- `js/` contains navigation, camera, editor, gallery, storage, and guest access behavior.
+- `api/` contains Vercel serverless functions for private photo creation, access, and cleanup.
+- `lib/supabase.js` contains server-only Supabase REST helpers.
 
-Large or numerous photos may exceed the browser's local storage quota. If saving fails, remove older memories in the gallery and try again. QR images are created using the existing QR image service and contain only the local Gallery link and memory ID; the photos themselves are not uploaded.
+Locally saved images use browser storage and may reach its quota. Guest sharing uploads a resized copy (up to 3 MB) to Supabase; the booth device keeps its local gallery copy. The Supabase service-role key must never be exposed to visitors.
