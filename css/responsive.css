@@ -1,0 +1,61 @@
+@media (max-width: 900px) {
+  .site-header { gap: 12px; padding-inline: 19px; }
+  .site-nav { gap: 12px; }.site-nav a { font-size: 10px; }
+  main { padding-inline: 20px; }
+  .booth-workspace { grid-template-columns: minmax(235px, .8fr) minmax(0, 1.2fr); gap: 14px; }
+  .gallery-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .editor-layout { grid-template-columns: minmax(0,1fr) minmax(305px,.9fr); gap: 13px; }
+}
+@media (max-width: 700px) {
+  .site-header { position: relative; min-height: 62px; padding: 9px 16px; }
+  .menu-toggle { display: block; }
+  .site-nav { display: none; position: absolute; z-index: 10; top: calc(100% - 1px); left: 0; right: 0; padding: 10px 17px 15px; background: #f5e6c9; border-bottom: 1px solid #d2b58a; box-shadow: 0 8px 12px #54391d1e; flex-wrap: wrap; gap: 6px 18px; }
+  .site-nav.open { display: flex; }
+  .site-nav a { font-size: 11px; }
+  main { padding: 21px 15px 38px; }
+  .hero { min-height: 300px; grid-template-columns: 1fr .8fr; padding: 30px 5%; }
+  .hero h1 { font-size: clamp(37px, 9vw, 55px); }
+  .hero-subtitle { font-size: 13px; }.hero-description { font-size: 16px; }
+  .hero-art { transform: scale(.84); transform-origin: center; margin: -15px -22px; }
+  .hero-stamp { display: none; }
+  .feature-grid { grid-template-columns: repeat(3, 1fr); }.feature-card { min-height: 125px; }
+  .steps-grid { grid-template-columns: repeat(3, 1fr); row-gap: 14px; }
+  .page-title { align-items: start; flex-direction: column; gap: 3px; }
+  .page-title > p { margin: 0; }
+  .booth-workspace { grid-template-columns: 1fr; }
+  .capture-column { grid-row: 1; }
+  .control-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0 14px; }
+  .booth-actions { align-self: center; }
+  .camera-shell { min-height: 280px; }
+  #camera-video { height: min(60vw, 340px); min-height: 220px; }
+  .camera-placeholder { min-height: 220px; }
+  .editor-layout { grid-template-columns: 1fr; }
+  .editor-canvas { position: relative; top: auto; }
+  .editor-canvas-inner { min-height: 360px; max-height: 58vh; }
+  .about-layout, .help-layout { grid-template-columns: 1fr; }
+  .about-note { transform: none; }
+  .catalog-layout { grid-template-columns: 1fr !important; }
+  .catalog-sidebar { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .catalog-sidebar h2, .catalog-sidebar .field-hint { display: none; }
+  .catalog-tab { flex: 1; }
+}
+@media (max-width: 470px) {
+  .brand strong { font-size: 15px; }.brand-mark { width: 29px; height: 29px; }
+  .hero { display: block; padding: 28px 7%; }.hero-copy { max-width: 72%; }.hero-art { position: absolute; inset: 0 0 0 30%; transform: scale(.71); transform-origin: right center; pointer-events: none; }.hero-art .polaroid, .hero-art .hand-note { display: none; }
+  .hero h1 { font-size: 41px; }.hero-description { font-size: 15px; }.button { padding-inline: 11px; font-size: 10px; }
+  .feature-grid { grid-template-columns: repeat(2, 1fr); gap: 9px; }.feature-card { min-height: 117px; }
+  .steps-grid { grid-template-columns: repeat(2, 1fr); }
+  .how-section { padding: 19px 12px; }
+  .control-panel { padding: 15px 12px; gap: 0 9px; }
+  .control-group h2 { font-size: 12px; }.layout-options, .filter-options { gap: 3px; }
+  .booth-actions { grid-column: 1/-1; }.booth-actions .button { font-size: 10px; }
+  .camera-shell { padding-inline: 9px; }.camera-placeholder { inset-inline: 9px; }
+  .strip-buttons { flex-wrap: wrap; }
+  .gallery-heading h1 { font-size: 29px; }.gallery-camera { width: 42px; height: 42px; font-size: 19px; }
+  .gallery-toolbar { flex-wrap: wrap; }.search-box { flex-basis: 100%; }.photo-count { margin-left: auto; }
+  .gallery-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 11px; }.memory-image { height: 142px; }
+  .about-paper, .help-steps, .faq-paper { padding: 21px; }.purpose-card { grid-template-columns: 1fr; padding: 22px; }
+  .catalog-content { padding: 14px !important; }.catalog-grid { grid-template-columns: repeat(2,minmax(0,1fr)) !important; }.frame-preview { height: 125px !important; }
+  .editor-canvas-inner { min-height: 300px; }
+  .editor-actions .button { font-size: 8px; }
+}
