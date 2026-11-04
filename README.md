@@ -47,7 +47,7 @@ The local gallery works without a backend, but creating guest codes requires the
    - `SUPABASE_URL` — the Supabase project URL.
    - `SUPABASE_SERVICE_ROLE_KEY` — the Supabase service-role key. Keep it server-side; never add it to frontend code.
    - `CRON_SECRET` — a long random secret used to authorize Vercel's expired-photo cleanup job.
-4. Deploy the project on Vercel. Saving a finished photo on the deployed site uploads it to the private bucket and creates an independent, random 24-hour access code. Give each guest their code and this link: `https://YOUR-VERCEL-DOMAIN/pages/access.html`. They can open that page on any device and enter it. The editor also provides a direct guest-page link with the code prefilled.
+4. Deploy the project on Vercel. Each photobooth shot is uploaded to the private bucket as it is captured and immediately gets its own random 24-hour access code, before you save or download the strip. The code appears on screen so you can note it and give it to that photo's guest. Give each guest this link: `https://YOUR-VERCEL-DOMAIN/pages/access.html`; they can open it on any device and enter their code. The editor also creates a code when you save an edited photo.
 
 The guest code is stored hashed in the database; photo reads require a valid, unexpired code and use a short-lived signed image URL. Expired photos are removed by the daily Vercel cron job. The local Gallery remains browser-specific and is not the guest-access page. Guest codes are bearer secrets: share each only with its intended recipient.
 
@@ -57,7 +57,7 @@ The guest code is stored hashed in the database; photo reads require a valid, un
 - Camera capture with a timer, one/two/three/four-photo layouts, eight retro filters, frames, and individual photo saves.
 - Photo editing with upload, crop ratios, zoom, rotation, brightness, contrast, filters, frames, stickers, and date labels.
 - Saved photos can be viewed, downloaded, searched, filtered, or removed from the local gallery.
-- A4 photobooth print preview lists each individual photo's guest code after sharing is configured.
+- The photobooth immediately displays every successful guest code in a prominent on-screen panel with expiry time and a copy button; the same codes are listed in the A4 print preview.
 - The front end does not send guest codes to a QR-code image service.
 
 ## Project structure

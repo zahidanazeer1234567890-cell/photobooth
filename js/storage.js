@@ -119,6 +119,9 @@
     if (!memory || typeof memory.dataUrl !== 'string') {
       return Promise.reject(new Error('Save a photo before creating an access code.'));
     }
+    if (window.location.protocol === 'file:') {
+      return Promise.reject(new Error('Guest codes are unavailable when the site is opened as a local file. Open the deployed Vercel site with the Supabase sharing setup enabled.'));
+    }
     return prepareSharedImage(memory.dataUrl).then(function (dataUrl) {
       return fetch('/api/memories', {
         method: 'POST',
@@ -126,10 +129,20 @@
         body: JSON.stringify({ title: memory.title || 'A Flashback', dataUrl: dataUrl })
       });
     }).then(function (response) {
-      return response.json().catch(function () {
-        throw new Error('The sharing service returned an unreadable response.');
-      }).then(function (result) {
+      return response.text().then(function (body) {
+        var result;
+        try {
+          result = JSON.parse(body);
+        } catch (error) {
+          throw new Error('The sharing API did not return JSON (HTTP ' + response.status + '). Deploy the site on Vercel and confirm its /api/memories endpoint and Supabase environment variables are configured.');
+        }
+        if (!result || typeof result !== 'object') {
+          throw new Error('The sharing API returned an invalid response. Please try again.');
+        }
         if (!response.ok) throw new Error(result.error || 'The photo could not be shared. Please try again.');
+        if (typeof result.code !== 'string' || typeof result.expiresAt !== 'string') {
+          throw new Error('The sharing API response is missing the guest code. Check the Vercel API deployment and try again.');
+        }
         return updateAccess(memory, result.code, result.expiresAt);
       });
     });

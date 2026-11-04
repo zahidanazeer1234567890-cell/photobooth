@@ -472,6 +472,7 @@
         accessExpiry.textContent = 'Valid until ' + new Date(published.accessExpiresAt).toLocaleString();
         accessLink.href = window.FlashbackStorage.accessUrlFor(published.accessCode);
         accessPanel.hidden = false;
+        accessPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
         report(published.accessStorageWarning ? 'The code was created, but could not be saved in this browser. Copy it now: ' + published.accessStorageWarning : 'Your photo is ready to share. Give the guest this code; it expires in 24 hours.');
       }).catch(function (error) {
         report('Saved on this device only. A guest code could not be created: ' + error.message);

@@ -16,13 +16,19 @@
       <div class="capture-column">
         <div class="camera-shell paper-card"><div class="camera-top"><span class="rec-indicator"><i></i> REC</span><span class="camera-led">◉</span></div><video id="camera-video" autoplay playsinline muted aria-label="Live camera preview"></video><div class="camera-placeholder" id="camera-placeholder"><span class="camera-placeholder-icon">📷</span><h2>Your camera goes here</h2><p>Allow camera access to get started.</p><button class="button button-primary" id="enable-camera">Enable camera</button><label class="upload-link">or upload a photo<input id="photo-upload" type="file" accept="image/*"></label></div><div class="countdown-overlay" id="countdown-overlay" aria-live="assertive"></div><div class="camera-bottom"><span>FLASHBACK · PHOTOBOOTH</span><span class="camera-status" id="camera-status">Camera not connected</span></div></div>
         <div class="strip-preview-wrap"><h2>Photo strip preview <span>✦</span></h2><div class="strip-preview paper-card" id="strip-preview"><div class="strip-photos" id="strip-photos"><div class="strip-empty">Your captured photos<br>will show up here ♡</div></div><p class="strip-date" id="strip-date"></p><span class="strip-caption">FLASHBACK</span></div><div class="strip-buttons"><button class="button button-outline" id="clear-photos">Clear photos</button><button class="button button-primary" id="save-strip" disabled>↓ &nbsp; Save photo strip</button></div><p class="status-message" id="capture-status" aria-live="polite"></p>
+          <section class="guest-codes-panel paper-card" id="guest-codes-panel" aria-live="polite" hidden>
+            <h2>Your guest codes</h2>
+            <p>A code appears here as soon as its photo is captured. Note it and give it to the person in that photo; it expires 24 hours after creation.</p>
+            <div class="guest-codes-list" id="guest-codes-list"></div>
+            <a class="button button-outline guest-code-page-link" href="access.html">Open guest code page</a>
+          </section>
           <section class="print-preview-area" aria-labelledby="a4-preview-title">
             <div class="print-preview-heading"><h3 id="a4-preview-title">A4 print preview</h3><span>Portrait · A4</span></div>
             <article class="a4-print-sheet" id="a4-print-sheet" aria-label="A4 portrait print design preview">
               <div class="print-sheet-inner">
                 <header class="print-sheet-header"><span class="print-sheet-mark">◉</span><span>FLASHBACK <small>RETRO PHOTOBOOTH</small></span></header>
                 <div class="print-sheet-title"><span>A LITTLE KEEPSAKE</span><h3>Your moment,<br>kept forever.</h3></div>
-                <div class="print-image-area" id="a4-print-photos" aria-live="polite"><p id="print-image-placeholder">Take photos, then save them<br>to create a private code for each picture</p></div>
+                <div class="print-image-area" id="a4-print-photos" aria-live="polite"><p id="print-image-placeholder">Take photos to create a private code for each picture</p></div>
                 <footer class="print-sheet-footer"><span>PHOTO STRIP</span><p>Made with ♡ for the memories.</p><time id="print-date"></time></footer>
               </div>
             </article>

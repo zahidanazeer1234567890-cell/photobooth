@@ -15,6 +15,10 @@
   var countdown = document.getElementById('countdown-overlay');
   var statusMessage = document.getElementById('capture-status');
   var photoUpload = document.getElementById('photo-upload');
+  var guestCodesPanel = document.getElementById('guest-codes-panel');
+  var guestCodesList = document.getElementById('guest-codes-list');
+  var shotCodeStates = [];
+  var codeJobs = 0;
   var stream = null;
   var cameraConnecting = false;
   var stillImage = null;
@@ -60,15 +64,74 @@
     statusMessage.textContent = message;
   }
 
+  function clearGuestCodes() {
+    guestCodesList.replaceChildren();
+    guestCodesPanel.hidden = true;
+  }
+
+  function showGuestCodes() {
+    guestCodesList.replaceChildren();
+    shotCodeStates.forEach(function (state, index) {
+      var card = document.createElement('article');
+      card.className = 'guest-code-card';
+      var title = document.createElement('span');
+      title.className = 'guest-code-photo-label';
+      title.textContent = 'Photo ' + (index + 1);
+      card.appendChild(title);
+      var memory = state && state.memory;
+      if (state && state.status === 'ready' && window.FlashbackStorage.hasActiveAccess(memory)) {
+        var code = document.createElement('strong');
+        code.className = 'guest-code-value';
+        code.textContent = memory.accessCode;
+        var expiry = document.createElement('time');
+        expiry.dateTime = memory.accessExpiresAt;
+        expiry.textContent = 'Expires ' + new Date(memory.accessExpiresAt).toLocaleString();
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'button button-outline';
+        copy.textContent = 'Copy code';
+        copy.addEventListener('click', function () {
+          window.FlashbackStorage.copyText(memory.accessCode).then(function () {
+            copy.textContent = 'Copied!';
+            globalThis.setTimeout(function () { copy.textContent = 'Copy code'; }, 1800);
+          }).catch(function (error) {
+            showStatus(error.message);
+          });
+        });
+        card.append(code, expiry, copy);
+      } else {
+        var status = document.createElement('p');
+        status.className = 'guest-code-status';
+        status.textContent = state && state.status === 'failed' ? state.error : 'Creating private code…';
+        card.appendChild(status);
+        if (state && state.status === 'failed') {
+          var retry = document.createElement('button');
+          retry.type = 'button';
+          retry.className = 'button button-outline';
+          retry.textContent = 'Try again';
+          retry.addEventListener('click', function () { createGuestCode(index); });
+          card.appendChild(retry);
+        }
+      }
+      guestCodesList.appendChild(card);
+    });
+    guestCodesPanel.hidden = guestCodesList.childElementCount === 0;
+    if (!guestCodesPanel.hidden) guestCodesPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
   function setSharingPending(pending) {
     sharingPending = pending;
-    document.querySelectorAll('.control-panel button').forEach(function (button) { button.disabled = pending; });
-    document.getElementById('clear-photos').disabled = pending;
-    saveButton.disabled = pending || photos.length === 0;
-    if (!pending) {
-      captureButton.disabled = photos.length >= targetCount();
-      refreshPrintPreview();
-    }
+    updateBusyControls();
+  }
+
+  function updateBusyControls() {
+    var busy = sharingPending || codeJobs > 0;
+    document.querySelectorAll('.control-panel button').forEach(function (button) { button.disabled = busy; });
+    document.getElementById('clear-photos').disabled = busy;
+    photoUpload.disabled = busy;
+    saveButton.disabled = sharingPending || codeJobs > 0 || photos.length === 0;
+    captureButton.disabled = busy || photos.length >= targetCount();
+    refreshPrintPreview();
   }
 
   function cameraIsLive() {
@@ -86,7 +149,7 @@
       var image = document.createElement('img');
       image.src = photo.dataUrl;
       image.alt = 'Captured photobooth moment';
-      image.style.filter = filterStyles[selectedFilter];
+      image.style.filter = filterStyles[photo.filter || 'normal'];
       framedPhoto.appendChild(image);
       stripPhotos.appendChild(framedPhoto);
     });
@@ -96,7 +159,7 @@
       empty.innerHTML = 'Your captured photos<br>will show up here ♡';
       stripPhotos.appendChild(empty);
     }
-    saveButton.disabled = sharingPending || photos.length === 0;
+    saveButton.disabled = sharingPending || codeJobs > 0 || photos.length === 0;
     captureButton.disabled = sharingPending || photos.length >= targetCount();
     captureButton.innerHTML = photos.length >= targetCount() ? '✓ &nbsp; Strip complete' : '▣ &nbsp; Take Photo' + (photos.length ? ' (' + (photos.length + 1) + '/' + targetCount() + ')' : '');
     refreshPrintPreview();
@@ -106,18 +169,20 @@
     var generation = ++previewGeneration;
     printPhotos.replaceChildren();
     if (!photos.length) {
-      printPlaceholder.innerHTML = 'Take photos, then save them<br>to create a private code for each picture';
+      printPlaceholder.innerHTML = 'Take photos to create a private code for each picture';
       printPhotos.appendChild(printPlaceholder);
       printButton.disabled = true;
       return;
     }
     printDate.textContent = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-    var hasSavedCodes = savedShotMemories.length === photos.length && savedShotMemories.every(window.FlashbackStorage.hasActiveAccess);
-    printButton.disabled = sharingPending || !savedShotMemories.length || savedShotMemories.length !== photos.length;
+    var hasSavedCodes = photos.length > 0 && photos.every(function (photo, index) {
+      return window.FlashbackStorage.hasActiveAccess(savedShotMemories[index]);
+    });
+    printButton.disabled = sharingPending || !hasSavedCodes;
     if (!hasSavedCodes) {
       var note = document.createElement('p');
       note.className = 'print-qr-note';
-      note.textContent = sharingPending ? 'Creating private 24-hour codes…' : 'Some private codes are unavailable. Save again on the hosted site to retry.';
+      note.textContent = 'Each photo gets its private code immediately after capture.';
       printPhotos.appendChild(note);
     }
     photos.forEach(function (photo, index) {
@@ -126,7 +191,7 @@
       var image = document.createElement('img');
       image.className = 'print-photo-image';
       image.alt = 'Photo ' + (index + 1);
-      image.src = hasSavedCodes ? savedShotMemories[index].dataUrl : photo.dataUrl;
+      image.src = savedShotMemories[index] && savedShotMemories[index].dataUrl ? savedShotMemories[index].dataUrl : photo.dataUrl;
       var details = document.createElement('div');
       details.className = 'print-photo-details';
       var label = document.createElement('span');
@@ -142,7 +207,7 @@
         details.appendChild(expires);
       } else {
         var pending = document.createElement('small');
-        pending.textContent = sharingPending ? 'Private code is being created' : 'Private code unavailable';
+        pending.textContent = shotCodeStates[index] && shotCodeStates[index].status === 'failed' ? 'Code unavailable — see the guest-code panel to retry' : 'Code appears after this photo is captured';
         details.appendChild(pending);
       }
       row.append(image, details);
@@ -228,10 +293,48 @@
       context.scale(-1, 1);
     }
     context.drawImage(source, 0, 0, canvas.width, canvas.height);
-    savedShotMemories = [];
-    photos.push({ dataUrl: canvas.toDataURL('image/jpeg', 0.84), frame: selectedFrame });
+    var photo = { dataUrl: canvas.toDataURL('image/jpeg', 0.84), frame: selectedFrame, filter: selectedFilter };
+    photos.push(photo);
+    var photoIndex = photos.length - 1;
     updateStrip();
-    showStatus(photos.length === targetCount() ? 'Your photo strip is ready to save or edit!' : 'Lovely! ' + photos.length + ' of ' + targetCount() + ' photos captured.');
+    showStatus('Photo ' + (photoIndex + 1) + ' captured. Creating its private guest code…');
+    createGuestCode(photoIndex);
+  }
+
+  function createGuestCode(index) {
+    var photo = photos[index];
+    if (!photo) return;
+    var existingState = shotCodeStates[index];
+    var memory = existingState && existingState.memory;
+    shotCodeStates[index] = { status: 'creating', memory: memory || null };
+    codeJobs += 1;
+    showGuestCodes();
+    updateBusyControls();
+    var prepareMemory = memory ? Promise.resolve(memory) : renderPhoto(photo).then(function (dataUrl) {
+      var saved = window.FlashbackStorage.save({
+        title: 'Photo ' + (index + 1),
+        type: 'photo',
+        dataUrl: dataUrl
+      });
+      savedShotMemories[index] = saved;
+      shotCodeStates[index].memory = saved;
+      return saved;
+    });
+    prepareMemory.then(function (savedMemory) {
+      return window.FlashbackStorage.publish(savedMemory);
+    }).then(function (published) {
+      savedShotMemories[index] = published;
+      shotCodeStates[index] = { status: 'ready', memory: published };
+      showStatus('Photo ' + (index + 1) + ' code is ready. ' +
+        (photos.length === targetCount() ? 'Your photo set is complete.' : 'Take the next photo or save your strip.'));
+    }).catch(function (error) {
+      shotCodeStates[index] = { status: 'failed', memory: memory || savedShotMemories[index] || null, error: error.message };
+      showStatus('Photo ' + (index + 1) + ' was captured, but its guest code could not be created: ' + error.message);
+    }).finally(function () {
+      codeJobs = Math.max(0, codeJobs - 1);
+      showGuestCodes();
+      updateBusyControls();
+    });
   }
 
   function renderPhoto(photo) {
@@ -251,7 +354,7 @@
         var scale = Math.min(innerWidth / image.width, innerHeight / image.height);
         var drawWidth = image.width * scale;
         var drawHeight = image.height * scale;
-        context.filter = filterStyles[selectedFilter];
+        context.filter = filterStyles[photo.filter || 'normal'];
         context.drawImage(image, inset + (innerWidth - drawWidth) / 2, inset + (innerHeight - drawHeight) / 2, drawWidth, drawHeight);
         resolve(canvas.toDataURL('image/jpeg', 0.9));
       };
@@ -307,7 +410,7 @@
             var drawX = x + inset + (innerWidth - drawWidth) / 2;
             var drawY = y + inset + (innerHeight - drawHeight) / 2;
             context.save();
-            context.filter = filterStyles[selectedFilter];
+            context.filter = filterStyles[photo.filter || 'normal'];
             context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
             context.restore();
             imageResolve();
@@ -341,6 +444,8 @@
     countdown.classList.remove('active');
     photos = [];
     savedShotMemories = [];
+    shotCodeStates = [];
+    clearGuestCodes();
     stillImage = null;
     placeholder.hidden = cameraIsLive();
     updateStrip();
@@ -358,15 +463,16 @@
       document.querySelectorAll('.layout-choice').forEach(function (item) { item.classList.toggle('selected', item === button); });
       if (photos.length > targetCount()) {
         photos = photos.slice(0, targetCount());
-        savedShotMemories = [];
+        savedShotMemories = savedShotMemories.slice(0, targetCount());
+        shotCodeStates = shotCodeStates.slice(0, targetCount());
       }
+      showGuestCodes();
       updateStrip();
     });
   });
   document.querySelectorAll('.filter-option').forEach(function (button) {
     button.addEventListener('click', function () {
       selectedFilter = button.dataset.filter;
-      savedShotMemories = [];
       document.querySelectorAll('.filter-option').forEach(function (item) { item.classList.toggle('selected', item === button); });
       video.style.filter = filterStyles[selectedFilter];
       updateStrip();
@@ -392,6 +498,8 @@
       stillImage.onload = function () {
         photos = [];
         savedShotMemories = [];
+        shotCodeStates = [];
+        clearGuestCodes();
         placeholder.hidden = true;
         cameraStatus.textContent = 'Photo ready';
         capturePhoto();
@@ -404,11 +512,11 @@
   });
   saveButton.addEventListener('click', function () {
     setSharingPending(true);
-    showStatus('Preparing your photo strip and individual photos…');
-    Promise.all([renderStrip(true), renderStrip(false), Promise.all(photos.map(renderPhoto))]).then(function (renders) {
+    showStatus('Preparing your decorated photo strip…');
+    Promise.all([renderStrip(true), renderStrip(false)]).then(function (renders) {
       var dataUrl = renders[0];
       var editSource = renders[1];
-      var memoriesToSave = [{
+      window.FlashbackStorage.save({
         title: 'Photo strip',
         type: 'strip',
         dataUrl: dataUrl,
@@ -417,41 +525,12 @@
         layout: selectedLayout,
         framesApplied: true,
         hasDateStamp: document.getElementById('stamp-toggle').checked
-      }];
-      renders[2].forEach(function (photoData, index) {
-        memoriesToSave.push({
-          title: 'Photo ' + (index + 1),
-          type: 'photo',
-          dataUrl: photoData
-        });
       });
-      var saved = window.FlashbackStorage.saveMany(memoriesToSave);
-      savedShotMemories = saved.slice(1);
-      updateStrip();
-      setSharingPending(true);
       window.FlashbackStorage.download(dataUrl, 'flashback-strip.jpg');
-      showStatus('Saved the strip and individual photos. Creating private 24-hour codes…');
-      return Promise.all(savedShotMemories.map(function (memory, index) {
-        return window.FlashbackStorage.publish(memory).then(function (published) {
-          savedShotMemories[index] = published;
-          return null;
-        }).catch(function (error) {
-          return error;
-        });
-      })).then(function (errors) {
-        var failed = errors.filter(Boolean);
-        if (failed.length) {
-          showStatus('Photos are saved on this device, but ' + failed.length + ' guest code(s) could not be created. ' + failed[0].message);
-        } else if (savedShotMemories.some(function (memory) { return memory.accessStorageWarning; })) {
-          showStatus('Guest codes were created but could not be saved in this browser. Copy each code from the A4 preview now.');
-        } else {
-          showStatus('Private codes are ready in the A4 preview and Gallery. Give each person their photo code; it expires in 24 hours.');
-        }
-      }).finally(function () {
-        setSharingPending(false);
-      });
+      showStatus('Photo strip saved and downloaded. Each individual photo already has its own guest code above.');
     }).catch(function (error) {
       showStatus(error.message);
+    }).finally(function () {
       setSharingPending(false);
     });
   });
@@ -462,6 +541,8 @@
   document.getElementById('reset-booth').addEventListener('click', function () {
     photos = [];
     savedShotMemories = [];
+    shotCodeStates = [];
+    clearGuestCodes();
     selectedFilter = 'normal';
     selectedFrame = 'pink';
     selectedLayout = 'strip';
